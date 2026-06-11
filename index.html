@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频去水印工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { font-size: 1.1rem; opacity: 0.9; }
+        .card { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); margin-bottom: 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; }
+        .tab { flex: 1; padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; background: #f8f9fa; cursor: pointer; text-align: center; font-size: 1rem; font-weight: 600; transition: all 0.3s; }
+        .tab:hover { border-color: #667eea; background: #e8e8ff; }
+        .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: transparent; }
+        .tab-icon { font-size: 1.5rem; display: block; margin-bottom: 5px; }
+        .platforms { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; justify-content: center; }
+        .badge { padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; color: white; }
+        .badge.black { background: #000; }
+        .badge.orange { background: #ff4906; }
+        .badge.red { background: #ff2442; }
+        .badge.blue { background: #00a1d6; }
+        .badge.yellow { background: #ff8200; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .input-group input { flex: 1; padding: 14px 20px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 1rem; }
+        .input-group input:focus { outline: none; border-color: #667eea; }
+        .btn { padding: 14px 30px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102,126,234,0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .upload-zone { border: 3px dashed #d0d0d0; border-radius: 12px; padding: 50px 20px; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; }
+        .upload-zone:hover { border-color: #667eea; background: #f0f0ff; }
+        .upload-zone input { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; }
+        .upload-icon { font-size: 3rem; margin-bottom: 15px; }
+        .upload-text { font-size: 1.1rem; color: #666; }
+        .upload-hint { font-size: 0.85rem; color: #999; margin-top: 8px; }
+        .file-info { display: none; margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px; font-size: 0.9rem; color: #555; }
+        .file-info.show { display: flex; align-items: center; gap: 10px; }
+        .process-mode { display: none; margin-top: 20px; }
+        .process-mode.show { display: block; }
+        .sub-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+        .sub-tab { padding: 10px 20px; border: 2px solid #e0e0e0; border-radius: 8px; background: #f8f9fa; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.3s; }
+        .sub-tab:hover { border-color: #667eea; }
+        .sub-tab.active { background: #667eea; color: white; border-color: #667eea; }
+        .canvas-container { position: relative; margin: 15px 0; }
+        .canvas-container canvas { border: 2px solid #667eea; border-radius: 8px; cursor: crosshair; max-width: 100%; }
+        .toolbar { display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap; }
+        .tool-group { display: flex; gap: 5px; }
+        .tool-btn { padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px; background: white; cursor: pointer; transition: all 0.3s; }
+        .tool-btn:hover { border-color: #667eea; }
+        .tool-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .brush-size { display: flex; align-items: center; gap: 10px; }
+        .brush-size label { font-weight: 600; color: #333; }
+        .brush-size input[type="range"] { width: 150px; }
+        .frame-selector { display: none; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .frame-selector.show { display: block; }
+        .frame-slider { width: 100%; margin: 10px 0; }
+        .frame-info { display: flex; justify-content: space-between; font-size: 0.9rem; color: #666; }
+        .progress-container { display: none; margin-top: 20px; }
+        .progress-container.show { display: block; }
+        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .progress-track { height: 12px; background: #e0e0e0; border-radius: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 6px; transition: width 0.3s; }
+        .progress-steps { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.85rem; color: #666; }
+        .progress-step.active { color: #667eea; font-weight: 600; }
+        .preview-area { display: none; margin-top: 25px; }
+        .preview-area.show { display: block; }
+        .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .preview-box { text-align: center; }
+        .preview-box h3 { margin-bottom: 10px; color: #333; }
+        .preview-box img, .preview-box video { max-width: 100%; max-height: 400px; border-radius: 8px; }
+        .btn-download { display: none; width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 15px; }
+        .btn-download.show { display: block; }
+        .error { display: none; margin-top: 20px; padding: 15px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00; }
+        .error.show { display: block; }
+        .success { display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; color: #155724; }
+        .success.show { display: block; }
+        .instructions { margin-top: 20px; padding: 15px; background: #e8f4fd; border-radius: 8px; font-size: 0.9rem; color: #0c5460; }
+        .instructions h4 { margin-bottom: 10px; }
+        .instructions ol { padding-left: 20px; }
+        .instructions li { margin-bottom: 5px; }
+        .footer { text-align: center; color: rgba(255,255,255,0.7); margin-top: 20px; font-size: 0.85rem; }
+        .batch-section { display: none; margin-top: 20px; }
+        .batch-section.show { display: block; }
+        .batch-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 10px; }
+        .batch-item.processing { background: #e8f4fd; }
+        .batch-item.success { background: #d4edda; }
+        .batch-item.error { background: #fee; }
+        @media (max-width: 600px) { .header h1 { font-size: 1.8rem; } .preview-grid { grid-template-columns: 1fr; } .tabs { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 视频去水印工具</h1>
+            <p>支持短视频解析 + 上传视频去水印 + 手动标注 + 批量处理</p>
+        </div>
+        <div class="card">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('parse')"><span class="tab-icon">🔗</span>短视频解析</div>
+                <div class="tab" onclick="switchTab('upload')"><span class="tab-icon">📤</span>上传去水印</div>
+                <div class="tab" onclick="switchTab('batch')"><span class="tab-icon">📦</span>批量处理</div>
+            </div>
+
+            <div id="parseSection">
+                <div class="platforms">
+                    <span class="badge black">抖音</span>
+                    <span class="badge orange">快手</span>
+                    <span class="badge red">小红书</span>
+                    <span class="badge blue">B站</span>
+                    <span class="badge yellow">微博</span>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="videoUrl" placeholder="粘贴视频分享链接...">
+                    <button class="btn btn-primary" onclick="parseVideo()">🔍 解析</button>
+                </div>
+                <div class="instructions">
+                    <h4>📖 使用说明：</h4>
+                    <ol>
+                        <li>打开抖音/快手/小红书/B站/微博APP</li>
+                        <li>找到想下载的视频，点击「分享」</li>
+                        <li>选择「复制链接」</li>
+                        <li>粘贴到上面的输入框</li>
+                        <li>点击「解析」按钮</li>
+                        <li>下载无水印视频</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div id="uploadSection" style="display:none">
+                <div class="upload-zone">
+                    <div class="upload-icon">📤</div>
+                    <div class="upload-text">点击或拖拽上传图片/视频</div>
+                    <div class="upload-hint">支持 PNG/JPG/WebP/MP4/AVI/MOV</div>
+                    <input type="file" id="fileInput" accept="image/*,video/*" onchange="handleFile(this.files[0])">
+                </div>
+                <div class="file-info" id="fileInfo">
+                    <span>📄</span>
+                    <span id="fileName"></span>
+                    <span id="fileSize" style="margin-left:auto;color:#999"></span>
+                </div>
+                <div class="process-mode" id="processMode">
+                    <h3 style="margin-bottom:15px;color:#333">🎯 选择处理方式</h3>
+                    <div class="sub-tabs">
+                        <div class="sub-tab active" onclick="switchMode('auto')">🤖 自动去水印</div>
+                        <div class="sub-tab" onclick="switchMode('manual')">🎨 手动标注</div>
+                    </div>
+                    <div id="autoMode">
+                        <button class="btn btn-primary" style="width:100%" onclick="processFile()">🚀 开始自动去水印</button>
+                    </div>
+                    <div id="manualMode" style="display:none">
+                        <p style="color:#666;margin-bottom:15px">用画笔涂抹或矩形框选水印位置，然后点击「去除水印」</p>
+                        <div class="frame-selector" id="frameSelector">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                <span style="font-weight:600">🎬 选择视频帧</span>
+                            </div>
+                            <input type="range" class="frame-slider" id="frameSlider" min="0" max="100" value="0" oninput="seekVideo(this.value)">
+                            <div class="frame-info">
+                                <span>⏱️ 时间: <span id="frameTime">0:00</span></span>
+                                <span>📊 帧: <span id="frameNum">0</span></span>
+                            </div>
+                        </div>
+                        <div class="canvas-container"><canvas id="canvas"></canvas></div>
+                        <div class="toolbar">
+                            <div class="tool-group">
+                                <div class="tool-btn active" id="toolBrush" onclick="selectTool('brush')">🖌️ 画笔</div>
+                                <div class="tool-btn" id="toolRect" onclick="selectTool('rect')">⬜ 矩形</div>
+                            </div>
+                            <div class="brush-size">
+                                <label>大小:</label>
+                                <input type="range" id="brushSize" min="5" max="50" value="20" oninput="document.getElementById('bsVal').textContent=this.value">
+                                <span id="bsVal">20</span>px
+                            </div>
+                            <button class="btn btn-secondary" onclick="clearCanvas()">🗑️ 清除</button>
+                            <button class="btn btn-danger" onclick="undoLast()">↩️ 撤销</button>
+                            <button class="btn btn-success" onclick="processAnnotated()">🚀 去除水印</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="batchSection" style="display:none">
+                <div class="upload-zone">
+                    <div class="upload-icon">📦</div>
+                    <div class="upload-text">批量上传文件</div>
+                    <div class="upload-hint">支持同时选择多个图片/视频文件</div>
+                    <input type="file" id="batchInput" accept="image/*,video/*" multiple onchange="handleBatch(this.files)">
+                </div>
+                <div class="batch-section" id="batchList">
+                    <h3 style="margin:15px 0;color:#333">📋 待处理列表</h3>
+                    <div id="batchItems"></div>
+                    <div style="margin-top:15px;display:flex;gap:10px">
+                        <button class="btn btn-success" onclick="startBatch()">🚀 开始批量处理</button>
+                        <button class="btn btn-secondary" onclick="clearBatch()">🗑️ 清空</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="progress-container" id="progress">
+                <div class="progress-header">
+                    <span id="progressTitle">正在处理...</span>
+                    <span id="progressTime"></span>
+                </div>
+                <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                <div class="progress-steps">
+                    <span class="progress-step active" id="s1">📤 上传</span>
+                    <span class="progress-step" id="s2">🔍 分析</span>
+                    <span class="progress-step" id="s3">🎨 处理</span>
+                    <span class="progress-step" id="s4">✅ 完成</span>
+                </div>
+            </div>
+
+            <div class="preview-area" id="preview">
+                <div class="preview-grid">
+                    <div class="preview-box"><h3>📌 原始文件</h3><div id="origPreview"></div></div>
+                    <div class="preview-box"><h3>✅ 处理结果</h3><div id="resPreview"></div></div>
+                </div>
+            </div>
+
+            <div class="success" id="successMsg"></div>
+            <div class="error" id="errorMsg"></div>
+            <button class="btn-download" id="btnDownload" onclick="downloadResult()">⬇️ 下载处理后的文件</button>
+        </div>
+        <div class="footer"><p>💡 提示：本工具仅供学习研究使用，请勿用于商业用途</p></div>
+    </div>
+
+    <script>
+        // 全局变量
+        var currentTab = 'parse';
+        var selectedFile = null;
+        var resultBlob = null;
+        var resultUrl = null;
+        var currentMode = 'auto';
+        var currentTool = 'brush';
+        var isDrawing = false;
+        var drawHistory = [];
+        var origImage = null;
+        var rectStart = null;
+        var batchFiles = [];
+        var vidEl = null;
+
+        // Tab切换
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tabs .tab').forEach(function(t, i) {
+                t.classList.toggle('active', ['parse','upload','batch'][i] === tab);
+            });
+            document.getElementById('parseSection').style.display = tab === 'parse' ? 'block' : 'none';
+            document.getElementById('uploadSection').style.display = tab === 'upload' ? 'block' : 'none';
+            document.getElementById('batchSection').style.display = tab === 'batch' ? 'block' : 'none';
+            hideAll();
+        }
+
+        function hideAll() {
+            document.getElementById('preview').classList.remove('show');
+            document.getElementById('btnDownload').classList.remove('show');
+            document.getElementById('errorMsg').classList.remove('show');
+            document.getElementById('successMsg').classList.remove('show');
+            document.getElementById('progress').classList.remove('show');
+        }
+
+        // 短视频解析
+        document.getElementById('videoUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') parseVideo();
+        });
+
+        function parseVideo() {
+            var url = document.getElementById('videoUrl').value.trim();
+            if (!url) { showError('请输入视频链接'); return; }
+            hideAll();
+            showProgress('正在解析...', 30);
+            var fd = new FormData();
+            fd.append('url', url);
+            fetch('/api/parse', {method:'POST', body:fd}).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) {
+                    updateProgress('解析完成', 100);
+                    document.getElementById('successMsg').textContent = '✅ 解析成功！标题: ' + (data.title||'无') + '，平台: ' + data.platform;
+                    document.getElementById('successMsg').classList.add('show');
+                    var a = document.createElement('a');
+                    a.href = data.video_url;
+                    a.textContent = '⬇️ 下载无水印视频';
+                    a.className = 'btn btn-success';
+                    a.style.cssText = 'display:inline-block;margin-top:10px;text-decoration:none';
+                    a.target = '_blank';
+                    document.getElementById('successMsg').appendChild(a);
+                } else {
+                    showError(data.detail || '解析失败');
+                }
+            }).catch(function(e) { showError('网络错误'); });
+        }
+
+        // 文件上传
+        function handleFile(file) {
+            if (!file) return;
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatSize(file.size);
+            document.getElementById('fileInfo').classList.add('show');
+            document.getElementById('processMode').classList.add('show');
+            switchMode('auto');
+            showPreview(file, 'origPreview');
+        }
+
+        function showPreview(file, elId) {
+            var el = document.getElementById(elId);
+            el.innerHTML = '';
+            if (file.type.startsWith('image/')) {
+                var img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                el.appendChild(img);
+            } else {
+                var vid = document.createElement('video');
+                vid.src = URL.createObjectURL(file);
+                vid.controls = true;
+                el.appendChild(vid);
+            }
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.sub-tab').forEach(function(t, i) {
+                t.classList.toggle('active', i === (mode === 'auto' ? 0 : 1));
+            });
+            document.getElementById('autoMode').style.display = mode === 'auto' ? 'block' : 'none';
+            document.getElementById('manualMode').style.display = mode === 'manual' ? 'block' : 'none';
+            if (mode === 'manual' && selectedFile) initManual();
+        }
+
+        function initManual() {
+            if (selectedFile.type.startsWith('image/')) {
+                document.getElementById('frameSelector').classList.remove('show');
+                loadToCanvas(selectedFile);
+            } else {
+                document.getElementById('frameSelector').classList.add('show');
+                loadVideo(selectedFile);
+            }
+        }
+
+        function loadToCanvas(file) {
+            var canvas = document.getElementById('canvas');
+            var ctx = canvas.getContext('2d');
+            var img = new Image();
+            img.onload = function() {
+                var max = 800;
+                var s = img.width > max ? max / img.width : 1;
+                canvas.width = img.width * s;
+                canvas.height = img.height * s;
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                origImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                drawHistory = [];
+                initCanvas(canvas, ctx);
+            };
+            img.src = URL.createObjectURL(file);
+        }
+
+        function loadVideo(file) {
+            vidEl = document.createElement('video');
+            vidEl.preload = 'auto';
+            vidEl.muted = true;
+            vidEl.onloadedmetadata = function() {
+                document.getElementById('frameSlider').max = Math.floor(vidEl.duration * 10);
+                seekVideo(0);
+            };
+            vidEl.src = URL.createObjectURL(file);
+        }
+
+        function seekVideo(v) {
+            if (!vidEl) return;
+            var t = v / 10;
+            vidEl.currentTime = t;
+            document.getElementById('frameTime').textContent = Math.floor(t/60) + ':' + String(Math.floor(t%60)).padStart(2,'0');
+            document.getElementById('frameNum').textContent = Math.floor(t * 30);
+            vidEl.onseeked = function() {
+                var canvas = document.getElementById('canvas');
+                var ctx = canvas.getContext('2d');
+                var max = 800;
+                var s = vidEl.videoWidth > max ? max / vidEl.videoWidth : 1;
+                canvas.width = vidEl.videoWidth * s;
+                canvas.height = vidEl.videoHeight * s;
+                ctx.drawImage(vidEl, 0, 0, canvas.width, canvas.height);
+                origImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                drawHistory = [];
+                initCanvas(canvas, ctx);
+            };
+        }
+
+        function initCanvas(canvas, ctx) {
+            canvas._ctx = ctx;
+            canvas.onmousedown = function(e) { startDraw(e, canvas, ctx); };
+            canvas.onmousemove = function(e) { doDraw(e, canvas, ctx); };
+            canvas.onmouseup = function(e) { endDraw(e, canvas, ctx); };
+            canvas.onmouseleave = function() { isDrawing = false; };
+        }
+
+        function startDraw(e, canvas, ctx) {
+            isDrawing = true;
+            drawHistory.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            if (currentTool === 'rect') {
+                rectStart = {x: e.offsetX, y: e.offsetY};
+            } else {
+                doDraw(e, canvas, ctx);
+            }
+        }
+
+        function doDraw(e, canvas, ctx) {
+            if (!isDrawing) return;
+            if (currentTool === 'brush') {
+                var bs = parseInt(document.getElementById('brushSize').value);
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.beginPath();
+                ctx.arc(e.offsetX, e.offsetY, bs/2, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        function endDraw(e, canvas, ctx) {
+            if (currentTool === 'rect' && rectStart && isDrawing) {
+                var x = Math.min(rectStart.x, e.offsetX);
+                var y = Math.min(rectStart.y, e.offsetY);
+                var w = Math.abs(e.offsetX - rectStart.x);
+                var h = Math.abs(e.offsetY - rectStart.y);
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.fillRect(x, y, w, h);
+            }
+            isDrawing = false;
+            rectStart = null;
+        }
+
+        function selectTool(t) {
+            currentTool = t;
+            document.getElementById('toolBrush').classList.toggle('active', t === 'brush');
+            document.getElementById('toolRect').classList.toggle('active', t === 'rect');
+        }
+
+        function clearCanvas() {
+            if (origImage) {
+                document.getElementById('canvas').getContext('2d').putImageData(origImage, 0, 0);
+                drawHistory = [];
+            }
+        }
+
+        function undoLast() {
+            if (drawHistory.length > 0) {
+                document.getElementById('canvas').getContext('2d').putImageData(drawHistory.pop(), 0, 0);
+            }
+        }
+
+        // 自动处理
+        function processFile() {
+            if (!selectedFile) { showError('请先选择文件'); return; }
+            var fd = new FormData();
+            fd.append('file', selectedFile);
+            fd.append('provider', 'local');
+            fd.append('watermark_type', 'auto');
+            var ep = selectedFile.type.startsWith('image/') ? '/api/remove-image' : '/api/remove-video';
+            showProgress('正在处理...', 50);
+            fetch(ep, {method:'POST', body:fd}).then(function(r) {
+                if (!r.ok) throw new Error('处理失败');
+                return r.blob();
+            }).then(function(blob) {
+                resultBlob = blob;
+                resultUrl = URL.createObjectURL(blob);
+                showResult(selectedFile);
+                updateProgress('完成', 100);
+                showSuccess('✅ 处理完成！');
+            }).catch(function(e) { showError('❌ ' + e.message); });
+        }
+
+        // 手动标注处理
+        function processAnnotated() {
+            if (!selectedFile) { showError('请先上传文件'); return; }
+            var canvas = document.getElementById('canvas');
+            var ctx = canvas.getContext('2d');
+            var mc = document.createElement('canvas');
+            mc.width = canvas.width;
+            mc.height = canvas.height;
+            var mctx = mc.getContext('2d');
+            var id = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var md = mctx.createImageData(canvas.width, canvas.height);
+            for (var i = 0; i < id.data.length; i += 4) {
+                var diff = Math.abs(id.data[i]-origImage.data[i]) + Math.abs(id.data[i+1]-origImage.data[i+1]) + Math.abs(id.data[i+2]-origImage.data[i+2]);
+                var v = diff > 50 ? 255 : 0;
+                md.data[i] = md.data[i+1] = md.data[i+2] = v;
+                md.data[i+3] = 255;
+            }
+            mctx.putImageData(md, 0, 0);
+            var fd = new FormData();
+            fd.append('file', selectedFile);
+            mc.toBlob(function(blob) {
+                fd.append('mask', blob, 'mask.png');
+                var ep = selectedFile.type.startsWith('image/') ? '/api/remove-image-annotated' : '/api/remove-video-annotated';
+                showProgress('正在处理...', 50);
+                fetch(ep, {method:'POST', body:fd}).then(function(r) {
+                    if (!r.ok) throw new Error('处理失败');
+                    return r.blob();
+                }).then(function(blob) {
+                    resultBlob = blob;
+                    resultUrl = URL.createObjectURL(blob);
+                    showResult(selectedFile);
+                    updateProgress('完成', 100);
+                    showSuccess('✅ 处理完成！');
+                }).catch(function(e) { showError('❌ ' + e.message); });
+            }, 'image/png');
+        }
+
+        function showResult(file) {
+            var orig = document.getElementById('origPreview');
+            var res = document.getElementById('resPreview');
+            orig.innerHTML = '';
+            res.innerHTML = '';
+            if (file.type.startsWith('image/')) {
+                var img1 = document.createElement('img'); img1.src = URL.createObjectURL(file); orig.appendChild(img1);
+                var img2 = document.createElement('img'); img2.src = resultUrl; res.appendChild(img2);
+            } else {
+                var v1 = document.createElement('video'); v1.src = URL.createObjectURL(file); v1.controls = true; orig.appendChild(v1);
+                var v2 = document.createElement('video'); v2.src = resultUrl; v2.controls = true; res.appendChild(v2);
+            }
+            document.getElementById('preview').classList.add('show');
+            document.getElementById('btnDownload').classList.add('show');
+        }
+
+        function downloadResult() {
+            if (!resultBlob || !selectedFile) return;
+            var a = document.createElement('a');
+            a.href = resultUrl;
+            a.download = 'clean_' + selectedFile.name;
+            a.click();
+        }
+
+        // 批量处理
+        function handleBatch(files) {
+            for (var i = 0; i < files.length; i++) {
+                batchFiles.push({file: files[i], status: 'pending', result: null});
+            }
+            renderBatch();
+            document.getElementById('batchList').classList.add('show');
+        }
+
+        function renderBatch() {
+            var el = document.getElementById('batchItems');
+            el.innerHTML = '';
+            batchFiles.forEach(function(item, i) {
+                var d = document.createElement('div');
+                d.className = 'batch-item ' + item.status;
+                var st = {pending:'⏳ 待处理', processing:'🔄 处理中', success:'✅ 完成', error:'❌ 失败'}[item.status];
+                d.innerHTML = '<span>' + (item.file.type.startsWith('image/') ? '🖼️' : '🎬') + '</span>' +
+                    '<span style="flex:1;font-weight:600">' + item.file.name + '</span>' +
+                    '<span>' + st + '</span>' +
+                    (item.status === 'success' ? '<button class="btn btn-info" onclick="dlBatch(' + i + ')">⬇️</button>' : '') +
+                    '<button class="btn btn-danger" onclick="rmBatch(' + i + ')">❌</button>';
+                el.appendChild(d);
+            });
+        }
+
+        function rmBatch(i) { batchFiles.splice(i, 1); renderBatch(); }
+        function clearBatch() { batchFiles = []; renderBatch(); document.getElementById('batchList').classList.remove('show'); }
+
+        function dlBatch(i) {
+            var item = batchFiles[i];
+            if (!item.result) return;
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(item.result);
+            a.download = 'clean_' + item.file.name;
+            a.click();
+        }
+
+        function startBatch() {
+            if (batchFiles.length === 0) { showError('请先添加文件'); return; }
+            showProgress('批量处理中...', 0);
+            var i = 0;
+            function next() {
+                if (i >= batchFiles.length) {
+                    updateProgress('完成', 100);
+                    var ok = batchFiles.filter(function(x) { return x.status === 'success'; }).length;
+                    showSuccess('✅ 批量处理完成！成功 ' + ok + '/' + batchFiles.length);
+                    return;
+                }
+                var item = batchFiles[i];
+                item.status = 'processing';
+                renderBatch();
+                updateProgress('处理 ' + (i+1) + '/' + batchFiles.length, Math.round(i/batchFiles.length*100));
+                var fd = new FormData();
+                fd.append('file', item.file);
+                fd.append('provider', 'local');
+                fd.append('watermark_type', 'auto');
+                var ep = item.file.type.startsWith('image/') ? '/api/remove-image' : '/api/remove-video';
+                fetch(ep, {method:'POST', body:fd}).then(function(r) {
+                    if (r.ok) return r.blob().then(function(b) { item.result = b; item.status = 'success'; });
+                    item.status = 'error';
+                }).catch(function() { item.status = 'error'; }).then(function() {
+                    renderBatch();
+                    i++;
+                    next();
+                });
+            }
+            next();
+        }
+
+        // 工具函数
+        function formatSize(b) {
+            if (b < 1024) return b + ' B';
+            if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+            return (b/1048576).toFixed(1) + ' MB';
+        }
+
+        function showProgress(title, pct) {
+            document.getElementById('progress').classList.add('show');
+            document.getElementById('progressTitle').textContent = title;
+            document.getElementById('progressFill').style.width = pct + '%';
+            ['s1','s2','s3','s4'].forEach(function(s, i) {
+                document.getElementById(s).classList.toggle('active', i <= Math.floor(pct/25));
+            });
+        }
+
+        function updateProgress(title, pct) {
+            document.getElementById('progressTitle').textContent = title;
+            document.getElementById('progressFill').style.width = pct + '%';
+            ['s1','s2','s3','s4'].forEach(function(s, i) {
+                document.getElementById(s).classList.toggle('active', i <= Math.floor(pct/25));
+            });
+        }
+
+        function showError(msg) {
+            document.getElementById('errorMsg').textContent = '❌ ' + msg;
+            document.getElementById('errorMsg').classList.add('show');
+            document.getElementById('successMsg').classList.remove('show');
+            setTimeout(function() { document.getElementById('progress').classList.remove('show'); }, 2000);
+        }
+
+        function showSuccess(msg) {
+            document.getElementById('successMsg').textContent = msg;
+            document.getElementById('successMsg').classList.add('show');
+            document.getElementById('errorMsg').classList.remove('show');
+            setTimeout(function() { document.getElementById('progress').classList.remove('show'); }, 2000);
+        }
+    </script>
+</body>
+</html>
